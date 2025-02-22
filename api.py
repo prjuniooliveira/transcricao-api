@@ -1,17 +1,13 @@
-import re
-import uvicorn
 from fastapi import FastAPI, Query
 from youtube_transcript_api import YouTubeTranscriptApi
+import re
 
-# Criar a API FastAPI
 app = FastAPI()
 
 # Função para extrair o ID do vídeo do YouTube
 def extrair_video_id(url: str):
     """
     Extrai o ID do vídeo a partir da URL do YouTube.
-    Exemplo de entrada: https://www.youtube.com/watch?v=abcdefg1234
-    Exemplo de saída: abcdefg1234
     """
     padrao = r"(?:v=|\/)([0-9A-Za-z_-]{11}).*"
     match = re.search(padrao, url)
@@ -31,14 +27,16 @@ def transcrever_video(youtube_url: str = Query(..., title="Seu link do YouTube")
 
     try:
         # Lista de idiomas suportados
-        idiomas = ["es", "pt-BR", "pt", "en"]  # Espanhol, Português do Brasil, Português, Inglês
+        idiomas = ["pt-BR", "pt", "es", "en"]  # Português Brasil, Português, Espanhol, Inglês
         transcricao = None
+        idioma_detectado = None
 
         for idioma in idiomas:
             try:
                 transcricao = YouTubeTranscriptApi.get_transcript(video_id, languages=[idioma])
+                idioma_detectado = idioma
                 break  # Sai do loop se conseguir a transcrição
-            except:
+            except Exception:
                 continue  # Tenta o próximo idioma
 
         if not transcricao:
@@ -47,13 +45,17 @@ def transcrever_video(youtube_url: str = Query(..., title="Seu link do YouTube")
         # Converter a transcrição para texto simples
         texto_transcrito = " ".join([item["text"] for item in transcricao])
 
-        return {"transcricao": texto_transcrito, "idioma_detectado": idioma}
+        return {"transcricao": texto_transcrito, "idioma_detectado": idioma_detectado}
 
     except Exception as e:
         return {"error": f"Erro ao processar a transcrição: {str(e)}"}
 
-# 🚀 Removemos o código do ngrok, pois o Railway já expõe a API publicamente
+# Rota de teste para verificar se a API está rodando
+@app.get("/")
+def home():
+    return {"mensagem": "API de Transcrição rodando no Render!"}
 
-# Rodar o servidor FastAPI
+# Executar a API
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=10000)
